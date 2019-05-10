@@ -1,0 +1,165 @@
+---
+title: "R4DS Chapters 5 and 13"
+author: "Nick Sun"
+date: "May 8, 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(nycflights13)
+library(maps)
+```
+
+### 5.7.1 Problem 2
+
+Which plane in the `flights` dataset has the worst on-time record?
+
+```{r}
+colnames(flights)
+
+flights %>% 
+  filter(!is.na(tailnum) & !is.na(arr_delay)) %>% 
+  mutate(ontime = arr_delay <= 0) %>% 
+  group_by(tailnum) %>% 
+  summarise(
+    on_time_prop = mean(ontime),
+    flights = n()
+  ) %>% 
+  filter(flights > 9) %>% 
+  arrange(on_time_prop) %>% 
+  head
+```
+
+The plane with the worst on time record (minimum number of flights is 10) is N168AT with a on time proportion on around 5.8%.
+
+### 5.7.1 Problem 4
+
+For each destination, compute the total minutes of delay.
+For each flight, compute the total delay for its destination.
+
+For the first part of this question, we can do:
+
+```{r}
+colnames(flights)
+
+flights %>% 
+  filter(arr_delay >= 0) %>% 
+  group_by(dest) %>% 
+  summarise(minutes_delayed = sum(arr_delay)) %>% 
+  arrange(desc(minutes_delayed)) %>% 
+  head
+```
+
+Atlanta has some serious delays.
+
+For the second part we can do:
+
+```{r}
+flights %>% 
+  filter(arr_delay > 0) %>% 
+  group_by(dest, carrier) %>% 
+  summarise(
+    total_arr_delay = sum(arr_delay)
+  ) %>% 
+  group_by(dest) %>% 
+  mutate(
+    arr_delay_prop = total_arr_delay / sum(total_arr_delay)
+  ) %>% 
+  arrange(dest, desc(arr_delay_prop))
+```
+
+### 5.7.1 Problem 6
+
+Look at each destination.
+Can you find flights that are suspiciously fast?
+Compute the air time for a flight relative to the shortest flight to that destination.
+Which flights were most delayed in the air?
+
+We can compute the average mean air times and identify unusual flights using the following code:
+
+```{r}
+flights %>% 
+  group_by(origin, dest) %>% 
+  mutate(
+    mean_air_time = mean(air_time, na.rm = TRUE)
+  ) %>% 
+  group_by(flight) %>% 
+  mutate(
+    flight_time_ratio = air_time / mean_air_time
+  ) %>% 
+  select(
+    origin, dest, flight, flight_time_ratio, air_time, mean_air_time
+  ) %>% 
+  arrange(flight_time_ratio, desc(mean_air_time))
+
+# %>% 
+#   select(origin, dest, mean_air_time) %>% 
+#   distinct %>% 
+#   arrange(mean_air_time)
+```
+
+Funkily short flights include flight 2132 (from LGA to BOS) and flight 1499 (from LGA to ATL) which had an air time of 65 minutes while the average air time is 113 minutes.
+
+We can compare all flights to the shortest flight in their trip to identify just how delayed some flights were in the air.
+
+```{r}
+flights %>% 
+  group_by(origin, dest) %>% 
+  mutate(
+    shortest_flight_time = min(air_time, na.rm = TRUE),
+    air_time_ratio = air_time / shortest_flight_time
+  ) %>% 
+  select(origin, dest, flight, air_time, shortest_flight_time, air_time_ratio) %>% 
+  filter(air_time_ratio != 1) %>% 
+  arrange(desc(air_time_ratio)) %>% 
+  head
+```
+
+### 13.4.6 Problem 1
+
+Compute the average delay by destination then join on the airports dataframe so you can show the spatial distribution of delays
+
+First we can grab the average delay by destination:
+
+```{r}
+flights %>% 
+  filter(arr_delay > 0) %>% 
+  group_by(dest) %>% 
+  summarise(
+    average_delay = mean(arr_delay)
+  ) %>% 
+  select(dest, average_delay) -> delay_by_dest
+
+colnames(delay_by_dest) <- c("faa", "average_delay")
+
+# airports %>% 
+#   left_join(delay_by_dest, by = "faa") %>% 
+#   ggplot(aes(lon, lat)) +
+#     borders("state") +
+#     geom_point(aes(fill = average_delay)) +
+#     coord_quickmap()
+
+delay_by_dest %>% 
+  left_join(airports, by = "faa") %>% 
+  select(faa, average_delay, name, lat, lon) %>% 
+  ggplot(aes(x = lon, y = lat)) +
+    borders("state") +
+    labs(title = "Eastern Seaboard has a ton of delays",
+         subtitle = "Cherry Capital Airport in Michigan though takes the cake for longest average delays",
+         x = "Longitude", 
+         y = "Latitude") +
+    geom_point(aes(color = average_delay),
+                   size = 2,
+                   alpha = .8) +
+    scale_color_continuous("Average Delay",
+                           low = "#ffff99", high = "#e60000") +
+    theme(
+      legend.title = element_text(face = "bold",
+                                  size = 10)
+    ) +
+    theme_minimal() +
+    coord_quickmap()
+```
+

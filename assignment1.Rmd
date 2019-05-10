@@ -1,0 +1,496 @@
+---
+title: "Viz Assignment 1"
+author: "Nick Sun"
+date: "April 19, 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(babynames)
+library(tidyverse)
+library(gridExtra)
+
+nsPalette <- c("#D73F09", "#006DB0", "#CC0033", "#009E73", "#CC79A7")
+```
+
+```{r include=FALSE}
+lastcentury <- babynames %>% filter(year >= 1900)
+dim(lastcentury)
+
+most_popular <- babynames %>% filter(year >= 1900) %>% 
+  group_by(sex, name) %>% 
+  summarise(
+    total = sum(n)
+  ) %>% 
+  arrange(desc(total))
+
+(popmale <- head(most_popular[most_popular$sex == "M",], 10)$name)
+(popfemale <- head(most_popular[most_popular$sex == "F",], 10)$name)
+
+propovertime <- function(namestr, gender, data=lastcentury) {
+  if (!(gender %in% c("M", "F", "Both"))) {
+    stop("Gender must be string \'Both\', \'M\' or \'F\'.") 
+  }
+  
+  if (gender == "M") {
+    gtxt <- "male"
+  } else if (gender == "F") {
+    gtxt <- "female"
+  } else {
+    gtxt <- "both"
+  }
+  
+  if (gender == "Both") {
+    ggplot(data[data$name == namestr,], aes(x = year, y = prop)) +
+      geom_line(color = "dodgerblue1",
+                size = 1.2) +
+      labs(title = paste0("Popularity of \'", namestr, "\' since 1900"),
+           subtitle = "All genders considered",
+           x = "Year",
+           y = "Proportion of Applicants")
+    
+  } else {
+    ggplot(data[data$name == namestr & data$sex == gender,], aes(x = year, y = prop)) +
+      geom_line(color = "dodgerblue1",
+                size = 1.2) +
+      labs(title = paste0("Popularity of \'", namestr, "\' since 1900"),
+           subtitle = paste0("Exclusively looking at ", gtxt, " births"),
+           x = "Year",
+           y = "Proportion of Applicants")
+  }
+}
+
+propovertime("Nicholas", "M") + geom_vline(xintercept = 1994)
+propovertime("Krishna", "M")
+propovertime("Abraham", "M")
+propovertime("Charlotte", "F")
+```
+```{r include=FALSE}
+mostpopularmalenames <- lastcentury %>% 
+  filter(sex == "M") %>% 
+  group_by(year) %>% 
+  summarise(
+    mapplicants = sum(n),
+    npopnames = sum(n[name %in% popmale])
+  ) %>% 
+  mutate(
+    proppop = npopnames/mapplicants
+  )
+
+mostpopularfemalenames <- lastcentury %>% 
+  filter(sex == "F") %>% 
+  group_by(year) %>% 
+  summarise(
+    fapplicants = sum(n),
+    npopnames = sum(n[name %in% popfemale])
+  ) %>% 
+  mutate(
+    proppop = npopnames/fapplicants
+  )
+
+g1 <- ggplot() +
+  geom_line(mostpopularmalenames,
+            mapping = aes(x = year, y = proppop, color = "Males"),
+            size = 1.2) +
+  geom_line(mostpopularfemalenames,
+            mapping = aes(x = year, y = proppop, color = "Females"),
+            size = 1.2,
+            linetype = 3) +
+  theme_minimal() +
+  labs(title = "Yearly Proportion of Births with Most Common Given Names since 1900",
+       subtitle = "Male names are James, John, Robert, Michael, William, David, Richard, Joseph, Charles, Thomas\nFemale names are Mary, Patricia, Elizabeth, Jennifer, Linda, Barbara, Margaret, Susan, \nDorothy, Jessica",
+       x = "Years",
+       y = "Proportion of Births") +
+  scale_color_manual(name = "Line Color",
+                     values = c(Males="firebrick1", Females="forestgreen"),
+                     guide = guide_legend(
+                       direction = "horizontal"
+                     )) +
+  theme(legend.position = "top",
+        legend.direction = "horizontal") +
+  scale_x_continuous(breaks = seq(1900, 2017, by = 10)) +
+  geom_vline(xintercept = 2017, color = "black") +
+  annotate("text", x = 2014, y = .3, label = "2017")
+g1
+```
+
+```{r include=FALSE}
+potterheads <- babynames[babynames$name %in% c("Hermione","Harry","Ronald"),]
+head(potterheads)
+
+ggplot(potterheads, aes(x = year, y = prop, color = name)) +
+  geom_line()
+```
+
+```{r include=FALSE}
+weirdmales <- lastcentury %>% 
+  filter(sex == "M") %>% 
+  group_by(year) %>% 
+  summarise(
+    total = sum(n),
+    nweirdos = sum(n[n < 20])
+  ) %>% 
+  mutate(
+    weirdprop = nweirdos/total
+  )
+
+weirdfemales <- lastcentury %>% 
+  filter(sex == "F") %>% 
+  group_by(year) %>% 
+  summarise(
+    total = sum(n),
+    nweirdos = sum(n[n < 20])
+  ) %>% 
+  mutate(
+    weirdprop = nweirdos/total
+  )
+
+ggplot(weirdmales, aes(x = year, y = weirdprop)) +
+  geom_line()
+
+ggplot(weirdfemales, aes(x = year, y = weirdprop)) +
+  geom_line()
+
+g2 <- ggplot() +
+  geom_line(weirdmales,
+            mapping = aes(x = year, y = weirdprop, color = "Males"),
+            size = 1.2) +
+  geom_line(weirdfemales,
+            mapping = aes(x = year, y = weirdprop, color = "Females"),
+            size = 1.2,
+            linetype=2) +
+  theme_minimal() +
+  labs(title = "Yearly Proportion of Births with Rare Given Names since 1900",
+       subtitle = "Rare names determined as less than 20 individuals in a year",
+       x = "Years",
+       y = "Proportion of Births") +
+  scale_color_manual(name = "Line Color",
+                     values = c(Males="firebrick1", Females="forestgreen"),
+                     guide = guide_legend(
+                       direction = "horizontal"
+                     )) +
+  theme(legend.position = "top",
+        legend.direction = "horizontal") +
+  scale_x_continuous(breaks = seq(1900, 2017, by = 10)) +
+  geom_vline(xintercept = 2017, color = "black") +
+  annotate("text", x = 2014, y = .075, label = "2017")
+g2
+```
+
+```{r out.height = "5in",out.width = "5in", include=FALSE}
+grid.arrange(g1, g2, nrow = 2)
+```
+
+```{r include=FALSE}
+stuff <- lastcentury %>% 
+  group_by(name) %>% 
+  summarise(
+    total = sum(n),
+    maletotal = sum(n[sex=="M"]),
+    femaletotal = sum(n[sex=="F"])
+  ) %>% 
+  filter(
+    maletotal > 0 & femaletotal > 0 & total > 5000
+  ) %>% 
+  mutate(
+    ratio = round(maletotal/femaletotal, 1),
+    closeto1 = abs(1 - ratio)
+  ) %>% 
+  arrange(
+    closeto1, desc(total)
+  )
+
+genderneutral <- head(stuff,200)$name
+braydyn <- lastcentury[lastcentury$name %in% genderneutral,]
+
+yeartodec <- function(year) {
+  if (substr(year, 1, 3) == "200") {
+    return("2000s")
+  } else if (substr(year, 1, 3) == "201") {
+    return("2010s")
+  } else if (substr(year, 1, 2) == "19") {
+    return(paste0("19", substr(year, 3, 3), "0s")) 
+  } else {
+    print("Invalid year.")
+  }
+}
+
+braydyn$decade <- sapply(braydyn$year, yeartodec)
+
+head(braydyn)
+
+braydyn %>% 
+  group_by(decade) %>% 
+  summarise(
+    population = sum(n),
+    popmale = sum(n[sex == "M"]),
+    popfemale = sum(n[sex == "F"]),
+    ratio = paste0(round(popmale/population, 4)*100, "%")
+  ) %>%
+  select(decade, popmale, ratio) -> ratiodf
+
+braydyn %>% 
+  group_by(decade, sex) %>% 
+  summarise(
+    population = sum(n)
+  ) %>% 
+  ggplot() +
+  geom_bar(aes(x = decade, y = population, fill = sex), stat="identity") +
+  labs(title = "Number of Births with Gender Neutral Names",
+       subtitle = "with Percentage of Males",
+       x = "Decades", 
+       y = "Number of Births") +
+  geom_hline(yintercept = 0.5, color = "white") +
+  geom_text(data = ratiodf,
+            aes(x = decade,
+                y = popmale + 50000,
+                label = ratio),
+                size = 2.7)+
+  scale_fill_manual("Gender",
+                    values=nsPalette,
+                    labels = c("Female", "Male")) +
+  theme_minimal() +
+  theme(
+    legend.position = "top"
+  )
+```
+
+```{r include = FALSE}
+
+braydyn %>% 
+  group_by(decade, sex) %>% 
+  summarise(
+    population = sum(n)
+  ) %>% 
+  ggplot() +
+  geom_bar(aes(x = decade, y = population, fill = sex), position = "fill",
+           stat="identity") +
+  labs(title = "Gender Proportions of Births with Gender Neutral Names",
+       x = "Decades", 
+       y = "Proportion of Births") +
+  geom_hline(yintercept = 0.5, color = "white")
+
+braydyn %>% 
+  group_by(decade, sex) %>% 
+  summarise(
+    population = sum(n)
+  )
+```
+
+```{r include=FALSE}
+braydyn %>% 
+  group_by(decade, sex) %>% 
+  summarise(
+    population = sum(n)
+  ) %>% 
+  ggplot() +
+  geom_bar(aes(x = decade, fill = sex, y = population),
+           stat = "identity", 
+           position = "dodge") +
+  labs(title = "Number of births with gender-neutral Names",
+       x = "Decades",
+       y = "Number of Births") +
+  scale_color_manual(values = c("dodgerblue1", "firebrick"))
+
+braydyn %>% 
+  group_by(year, sex) %>% 
+  summarise(
+    population = sum(n)
+  ) %>% 
+  ggplot() +
+  geom_point(aes(x = year, color = sex, y = population)) +
+  labs(title = "Number of births with gender-neutral Names",
+       x = "Decades",
+       y = "Number of Births")
+
+unique(braydyn$name)
+```
+
+```{r include=FALSE}
+genderneutraldata <- lastcentury
+genderneutraldata$genderneutral <- ifelse(genderneutraldata$name %in% genderneutral, "Neutral", "Not Neutral")
+
+genderneutraldata %>% 
+  group_by(year, genderneutral) %>% 
+  summarise(
+    namecount = sum(n)
+  ) -> genderneutraldata2
+
+genderneutraldata2$decade <- sapply(genderneutraldata2$year, yeartodec)
+
+ggplot(genderneutraldata2) +
+  geom_bar(mapping = aes(x = decade, y = namecount, fill = genderneutral),
+           position = "dodge",
+           stat = "identity")
+
+ggplot(genderneutraldata2) +
+  geom_bar(mapping = aes(x = decade, y = namecount, fill = genderneutral),
+           position = "fill",
+           stat = "identity") +
+  scale_fill_manual("Gender Neutral",
+                    values=nsPalette) +
+  labs(title = "Proportion of Gender Neutral Names over Time",
+       subtitle = "Top 200 Gender Neutral Names",
+       x = "Decades",
+       y = "") +
+  theme_minimal() +
+  theme(
+    legend.position = "top"
+  )
+
+genderneutraldata2 %>% 
+  group_by(decade) %>% 
+  mutate(
+    total = sum(namecount),
+    propneutral = sum(namecount[genderneutral==1])/total,
+    propnonneutral = sum(namecount[genderneutral==0])/total
+  ) %>% 
+  select(decade, total, propneutral, propnonneutral) %>% 
+  distinct() ->
+  androdata
+
+androdata
+
+ggplot(androdata, aes(x = decade, y = propneutral)) +
+  geom_point()
+```
+
+Today, let's take a look at the `babynames` dataset.
+There are countless routes of investigation to play around with, but we will focus on three questions:
+
+1. What are the most popular names since 1900 and how has their popularity changed over time?
+2. How have rare or uncommon names trended over time?
+3. How have gender neutral names trended over time?
+
+####### **I. Trend of Popular Names**
+
+The first part of this is finding the 10 most popular names for males and females since 1900.
+We considered the most popular names to be those with the most babies born with that name between 1900 and 2017.
+
+```{r echo=FALSE, out.width="4.5in", fig.align="center"}
+g1 <- ggplot() +
+  geom_line(mostpopularmalenames,
+            mapping = aes(x = year, y = proppop, color = "Males"),
+            size = 1.2) +
+  geom_line(mostpopularfemalenames,
+            mapping = aes(x = year, y = proppop, color = "Females"),
+            size = 1.2,
+            linetype = 3) +
+  theme_minimal() +
+  labs(title = "Yearly Proportion of Births with Most Common Given Names since 1900",
+       subtitle = "Male names are James, John, Robert, Michael, William, David, Richard, Joseph, Charles, Thomas\nFemale names are Mary, Patricia, Elizabeth, Jennifer, Linda, Barbara, Margaret, Susan, \nDorothy, Jessica",
+       x = "Years",
+       y = "Proportion of Births",
+       caption = "Proportions are calculated by gender") +
+  scale_color_manual(name = "Line Color",
+                     values = c(Males="firebrick1", Females="forestgreen"),
+                     guide = guide_legend(
+                       direction = "horizontal"
+                     )) +
+  theme(legend.position = "top",
+        legend.direction = "horizontal",
+        plot.subtitle = element_text(size = 10),
+        plot.caption = element_text(size = 10, face = "italic")) +
+  scale_x_continuous(breaks = seq(1900, 2017, by = 10)) +
+  geom_vline(xintercept = 2017, color = "black") +
+  annotate("text", x = 2014, y = .3, label = "2017")
+g1
+```
+
+Common names are much more common amongst males than females.
+At one point, almost 35% of male babies had one of 10 common names!
+Males and females follow a very similar trend despite this difference with peaks during the baby boomer generation and declines from there.
+
+####### **II. Trend of Rare or Uncommon Names**
+
+We consider uncommon names as those where less than 20 babies were given that name in that year.
+We calculated the proportion of births with these names for each year and for each gender.
+
+```{r echo=FALSE, out.height="3in",out.width = "4.5in", fig.align="center"}
+g2 <- ggplot() +
+  geom_line(weirdmales,
+            mapping = aes(x = year, y = weirdprop, color = "Males"),
+            size = 1.2) +
+  geom_line(weirdfemales,
+            mapping = aes(x = year, y = weirdprop, color = "Females"),
+            size = 1.2,
+            linetype=2) +
+  theme_minimal() +
+  labs(title = "Yearly Proportion of Births with Rare Given Names since 1900",
+       subtitle = "Rare names determined as less than 20 individuals in a year",
+       x = "Years",
+       y = "Proportion of Births",
+       caption = "Note that the babynames dataset does not contain data on names with less than 5 births.") +
+  scale_color_manual(name = "Line Color",
+                     values = c(Males="firebrick1", Females="forestgreen"),
+                     guide = guide_legend(
+                       direction = "horizontal"
+                     )) +
+  theme(legend.position = "top",
+        legend.direction = "horizontal",
+        plot.caption = element_text(size = 10, face= "italic")) +
+  scale_x_continuous(breaks = seq(1900, 2017, by = 10)) +
+  geom_vline(xintercept = 2017, color = "black") +
+  annotate("text", x = 2014, y = .075, label = "2017")
+g2
+```
+
+Although our data is incomplete because we don't have all rare names, we still see that rare names had a severe dip in relative popularity around the 1950s (when common names were very popular) but they are making a resurgence!
+
+####### **III. Gender neutral names**
+
+We identified gender neutral names by first filtering out names that had less than 5000 total births and then calculating the ratio of males and females.
+After sorting this list by gender ratio and number of births, we compiled a list of 200 popular gender neutral names.
+Below is the gender distribution amonst babies that had gender neutral names over time.
+
+```{r include=FALSE, out.height="3in",out.width="4.5in", out.height="3in",fig.align = "center"}
+ggplot(genderneutraldata2) +
+  geom_bar(mapping = aes(x = decade, y = namecount, fill = genderneutral),
+           position = "fill",
+           stat = "identity") +
+  scale_fill_manual("Gender Neutral",
+                    values=nsPalette) +
+  labs(title = "Proportion of Gender Neutral Names over Time",
+       subtitle = "Top 200 Gender Neutral Names",
+       x = "Decades",
+       y = "") +
+  theme_minimal() +
+  theme(
+    legend.position = "top"
+  )
+```
+
+```{r echo=FALSE, out.width="4.5in", fig.align="center"}
+braydyn %>% 
+  group_by(decade, sex) %>% 
+  summarise(
+    population = sum(n)
+  ) %>% 
+  ggplot() +
+  geom_bar(aes(x = decade, y = population, fill = sex), stat="identity") +
+  labs(title = "Number of Births with Gender Neutral Names",
+       subtitle = "with Percentage of Males",
+       x = "Decades", 
+       y = "Number of Births",
+       caption = "Percentages are number of males over total number of babies with gender neutral names") +
+  geom_hline(yintercept = 0.5, color = "white") +
+  geom_text(data = ratiodf,
+            aes(x = decade,
+                y = popmale + 50000,
+                label = ratio),
+                size = 2.7)+
+  scale_fill_manual("Gender",
+                    values=nsPalette,
+                    labels = c("Female", "Male")) +
+  theme_minimal() +
+  theme(
+    legend.position = "top",
+    plot.caption = element_text(size = 10, face = "italic")
+  )
+```
+
+Gender neutral names are slowly increasing in popularity overall, although the largest spike looks like it occurred between the 1940s and 1960s.
+However, gross number of males with gender neutral names has actually not changed dramatically since the 1950s.
+Gender neutral names for females on the other hand are increasing in popularity and constitute most of the growth in gender neutral names.
+Since the 1950s, around 70% of babies with gender neutral names are female compared to the 20s-40s where it was closer to half.

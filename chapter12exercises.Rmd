@@ -1,0 +1,157 @@
+---
+title: "Chapter 12.3 Exercises"
+author: "Nick Sun"
+date: "May 1, 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## Chapter Notes: Common problems and how to fix em
+
+1. One variable might be spread out across multiple columns
+2. One observation might be spread across multiple rows
+
+In `table4a`, we see that the columns 1999 and 2000 are not the names of variables, but rather values of a variable.
+Each row represents two observations, not one.
+
+```{r echo=FALSE}
+table4a
+
+table4a %>% 
+  gather(`1999`, `2000`, key="year", value="cases") -> tidy4a
+
+table4b %>% 
+  gather(`1999`, `2000`, key="year", value="population") -> tidy4b 
+
+left_join(tidy4a, tidy4b)
+```
+
+Spreading is the opposite of gathering.
+You use it when an observations is scattered across multiple rows. 
+An example would be `table2`; the `type` column contains the names of columns and the values of those columns are held in the `count` column.
+
+```{r echo=FALSE}
+table2
+
+table2 %>% 
+  spread(key = `type`, value = `count`)
+```
+
+### Question 1
+
+Why are `gather` and `spread` not perfectly symmetrical?
+Consider the following problem:
+
+```{r echo=FALSE}
+stocks <- tibble(
+  year   = c(2015, 2015, 2016, 2016),
+  half  = c(   1,    2,     1,    2),
+  return = c(1.88, 0.59, 0.92, 0.17)
+)
+
+stocks
+
+stocks %>% spread(year, return)
+
+stocks %>% 
+  spread(year, return) %>% 
+  gather("year", "return", `2015`:`2016`)
+```
+
+The table `stocks` originally has an observation spread out over multiple rows.
+`Spread` makes it so that `year` is now split into individual columns with `return` as the values in those columns.
+Running `gather` on this makes a brand new column `year` that is different from the original data in that it is a character vector instead of a dbl vector.
+
+The `convert` argument in `gather` and `spread` essentially runs another function `type_convert` on the new columns or rows.
+This function converts data to appropriate types, for example logicals, integers, etc.
+If we rerun our earlier code with `convert=TRUE`, we get the following:
+
+```{r echo=FALSE}
+stocks %>% 
+  spread(year, return, convert=TRUE) %>% 
+  gather("year", "return", `2015`:`2016`, convert=TRUE)
+```
+
+The output is largely unchanged except that `year` is an integer column instead of character.
+
+### Question 2: Why does this code fail?
+
+```{r }
+# table4a %>% 
+#   gather(1999, 2000, key = "year", value = "cases")
+
+table4a %>% 
+  gather(`1999`, `2000`, key = "year", value = "cases")
+```
+
+The column names have to be within backticks.
+Otherwise, R thinks that 1999 and 2000 are just integers.
+You don't need backticks if the name of the columns are characters.
+
+### Question 3 
+
+Why does spreading this tibble fail? How could you add a new column to fix this issue?
+
+```{r}
+people <- tribble(
+  ~name,             ~key,    ~value,
+  #-----------------|--------|------
+  "Phillip Woods",   "age",       45,
+  "Phillip Woods",   "height",   186,
+  "Phillip Woods",   "age",       50,
+  "Jessica Cordero", "age",       37,
+  "Jessica Cordero", "height",   156
+)
+
+people
+
+# people %>% 
+#   spread(key = key, value = value)
+```
+
+We get an error here because each row of output must be unique.
+Rows 1 and 3 have the same keys - they both have the age of Philip Woods.
+To fix this, we can add a column that has distinct values.
+
+```{r echo=FALSE}
+people %>% 
+  group_by(name ,key) %>% 
+  mutate(rownumber = row_number()) %>% 
+  spread(key = key, value = value)
+```
+
+
+### Question 4
+
+Tidy the simple tibble below.
+Do you need to spread or gather it?
+What are the variables?
+
+The rules for tidy data are as follows:
+
+1. Each variable must have its own column.
+2. Each observation must have its own row.
+3. Each value must have its own cell.
+
+```{r echo=FALSE}
+preg <- tribble(
+  ~pregnant, ~male, ~female,
+  "yes",     NA,    10,
+  "no",      20,    12
+)
+
+preg
+```
+
+We can gather `male` and `female` into one column called `sex`.
+We can also remove the NA observation by setting na.rm equal to TRUE.
+
+```{r echo=FALSE}
+preg %>% 
+  gather(male, female, key = sex, value = count, na.rm = TRUE)
+```
+

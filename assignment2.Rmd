@@ -1,0 +1,192 @@
+---
+title: "Viz Assignment 2"
+author: "Nick Sun"
+date: "April 29, 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(babynames)
+library(tidyverse)
+library(colorblindr)
+
+nsPalette <- c("#D73F09", "#006DB0", "#CC0033", "#009E73", "#CC79A7")
+```
+
+In assignment 1, I created the following stacked bar chart using the `babynames` dataset.
+In my exploration phase, I identified 200 names that were not uncommon and had an approximately equal ratio of males and females.
+I grouped these names together as "gender neutral names".
+The goals of this chart were to:
+
+1. Show how the number of Americans born with gender neutral names has trended over time
+2. Show how the gender proportion of Americans with gender neutral names has trended over time
+
+```{r echo=FALSE, out.width="5in", fig.align="center"}
+lastcentury <- babynames %>% filter(year >= 1900)
+
+stuff <- lastcentury %>% 
+  group_by(name) %>% 
+  summarise(
+    total = sum(n),
+    maletotal = sum(n[sex=="M"]),
+    femaletotal = sum(n[sex=="F"])
+  ) %>% 
+  filter(
+    maletotal > 0 & femaletotal > 0 & total > 5000
+  ) %>% 
+  mutate(
+    ratio = round(maletotal/femaletotal, 1),
+    closeto1 = abs(1 - ratio)
+  ) %>% 
+  arrange(
+    closeto1, desc(total)
+  )
+
+genderneutral <- head(stuff,200)$name
+braydyn <- lastcentury[lastcentury$name %in% genderneutral,]
+
+yeartodec <- function(year) {
+  if (substr(year, 1, 3) == "200") {
+    return("2000s")
+  } else if (substr(year, 1, 3) == "201") {
+    return("2010s")
+  } else if (substr(year, 1, 2) == "19") {
+    return(paste0("19", substr(year, 3, 3), "0s")) 
+  } else {
+    print("Invalid year.")
+  }
+}
+
+braydyn$decade <- sapply(braydyn$year, yeartodec)
+
+braydyn %>% 
+  group_by(decade) %>% 
+  summarise(
+    population = sum(n),
+    popmale = sum(n[sex == "M"]),
+    popfemale = sum(n[sex == "F"]),
+    ratio = paste0(round(popmale/population, 3)*100, "%")
+  ) %>%
+  select(decade, popmale, ratio) -> ratiodf
+
+braydyn %>% 
+  group_by(decade, sex) %>% 
+  summarise(
+    population = sum(n)
+  ) %>% 
+  ggplot() +
+  geom_bar(aes(x = decade, y = population, fill = sex), stat="identity") +
+  labs(title = "Number of Births with Gender Neutral Names",
+       subtitle = "with Percentage of Males",
+       x = "Decades", 
+       y = "Number of Births") +
+  geom_hline(yintercept = 0.5, color = "white") +
+  geom_text(data = ratiodf,
+            aes(x = decade,
+                y = popmale + 10000,
+                label = ratio),
+                size = 2.7)+
+  scale_fill_manual("Gender",
+                    values=nsPalette,
+                    labels = c("Female", "Male")) +
+  theme_classic() +
+  theme(
+    legend.position = "top"
+  ) -> oldplot
+
+suppressMessages(ggsave("assignment2oldplot.png", plot = oldplot))
+oldplot
+```
+
+Unsurprisingly, there are a few issues with this plot.
+
+First, one of my goals was to demonstrate how the gender proportion changes over time.
+It is tough to tell just from looking at each stacked bar if the proportion of females is increasing or decreasing because the area representing each proportion does not start at the same point.
+According to Cleveland and Mcgill (1984), *position along a common axis* is the easiest perceptual task for numeric data and we can take advantage of this by changing the stacked bar chart to a side-by-side bar chart with `postion=dodge`.
+
+Second, we chose to plot the percentage of males out of the total population of gender neutral named Americans.
+In terms of writing an interesting conclusion for the plot, we are probably more fascinated by the increasing trend of females with gender neutrals names.
+Additionally, we put the `geom_text` layer on top of the male bar, making the `geom_text` layer hard to read.
+We would probably be better served putting it outside of the bars and against a light background.
+When we create our side-by-side barplot, we can actually place the text on top of the female bar which makes it much easier to read.
+
+Third, the color selection here violates some of our previously discussed color guidelines.
+These while these bar charts are not as big as area or map plots, it is probably better to use less saturation.
+Additionally, the red and blue color scheme is tiring on the eyes, and we might be better served picking different hues altogether.
+We should make sure to select colors that are also color blind friendly - a lighter orange and blue are good choices according to `colorblindr`.
+
+Lastly, this plot could use polishing.
+The y-axis labels are cumbersome and could do with some rescaling and tidying up to make it more readable.
+Lastly, we can also definitely use some guiding gridlines within the plot area itself.
+
+After making these changes, we get this plot which is much nicer to digest!
+
+```{r echo=FALSE, out.width="5in", fig.align="center"}
+braydyn %>% 
+  group_by(decade) %>% 
+  summarise(
+    population = sum(n),
+    popmale = sum(n[sex == "M"]),
+    popfemale = sum(n[sex == "F"]),
+    ratio = paste0(round(popfemale/population, 3)*100, "%")
+  ) %>%
+  select(decade, popfemale, ratio) -> ratiodf
+
+braydyn %>% 
+  group_by(decade, sex) %>% 
+  summarise(
+    population = sum(n)
+  ) %>% 
+  ggplot() +
+  geom_bar(aes(x = decade, y = population, fill = sex),
+           stat="identity",
+           position="dodge"
+           ) +
+  labs(title = "Popularity of gender neutral names for girls on the rise",
+       subtitle = "The number of American males with gender neutral names has stayed pretty\n constant since the 1960s",
+       x = "Decades", 
+       y = "Number of Births (in thousands)",
+       caption = "The percentages displayed are the proportion of females amongst all Americans with gender neutral names") +
+  geom_hline(yintercept = 0.5, color = "black") +
+  geom_text(data = ratiodf,
+            aes(x = decade,
+                y = popfemale + 50000,
+                label = ratio),
+                size =2.7,
+            color = "#000000",
+            hjust = .9) +
+  scale_fill_manual("Gender",
+                    values=c("#f9926c", "#66b3ff"),
+                    labels = c("Female", "Male")) +
+  scale_y_continuous("Number of Births (in thousands)",
+                     breaks = seq(0, 1000000, by=100000),
+                     labels = seq(0, 1000, by = 100))+
+  theme_minimal() +
+  theme(
+    legend.position = "top",
+    legend.title = element_text(face = "bold"),
+    axis.text.y = element_text(angle = 45, hjust = 1, vjust = -.7),
+    plot.caption = element_text(face = "italic")
+  ) -> ggfin
+
+suppressMessages(ggsave("assignment2newplot.png", plot = ggfin))
+ggfin
+```
+
+Now it's much easier to visualize the main story points of the plot: the number of men with gender neutral names has started relatively constant while among females, gender neutral names have taken off in popularity!
+
+Moving the `geom_text` on top of the bar for female births was accomplished by using the `hjust` and `vjust` options and I think really helps the ease of readability and interpretation.
+
+The y-axis scaling was accomplished by using the `labels` option in `scale_y_continuous` and the angling in the `axis.text.y` component of theme.
+It saves space on the plot and again allows for easier readability.
+
+Lastly, the color selection was done via trail and error with the `colorblindr::cvd_grid` function and some pointers from a "Points of view: Color blindness", B. Wong, Nature Methods **8**, 441, (2011).
+The palette is friendly to the three main types of color blindness in order to make the plot as accessible as possible.
+
+```{r include=FALSE}
+library(colorblindr)
+cvd_grid(ggfin)
+```
+

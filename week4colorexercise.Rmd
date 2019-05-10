@@ -1,0 +1,34 @@
+---
+title: "Viz - Use of Color Assignment"
+author: 'Group 9: Patrick, Prince, Lisa, Nick, Yanli'
+date: "April 27, 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Plot 1
+
+1. This plot is a type of chloropleth map where color encodes the average temperature change between 1991-2012 and 1901-1960. This is a continuous variable.
+2. The color scale here is divergent since different parts of the country might be warmer or cooler in 1991-2012 as compared to the first half of the 20th century. There are two hues to differentiate the direction of the temperature change (red and blue) and then the luminance indicates the magnitude of the temperature change.
+3. The lecture recommended not using red and blue together in the same plot since it is visually straining, but I think it is alright here since most people associate "hot" with the color red and "cold" with the color blue. It makes it very easy to identify which regions of the country have been heating up or cooling at a glance. The adjustment of chroma and luminance also makes sense since temperature data is continuous. One thing that would have been good to check would be if the map they produced was color blind friendly.
+
+## Plot 2
+
+1. This plot is a map of the Indian Ocean where color is used to describe average wind speed. Wind speed is continous variable.
+2. The color scale here is sequential - only one hue is used and the luminance is adjusted to show the differing amount of wind speed. The color is not very saturated. Even at the darkest luminance which is used to indicate low wind speed, the selected blue is quite mild.
+3. The use of less saturated colors here was a good choice since we are dealing with a large area plot. The continuous color scale contributes to the authors point - wind patterns in the southern Indian Ocean are complex and areas of high wind speed intermix with areas of low wind speed. The authors also used a luminance difference between the data and the background, which in this case was the map of the surrounding land masses. They chose to make Africa, India, Australia, etc. white to not overpower the unsaturated color scale but still make it distinct from the actual data. 
+
+## Plot 3
+
+1. The plot here is a mpa of Baghdad where neighborhoods are colored in according to the sectarian group living in that neighborhood (Sunni, Shiite, Christian, or Mixed). This data is discrete and unordered.
+2. Since our data is unordered, only hue is adjusted to show which groups are in which neighborhoods. The luminance is not changed. All of the colors are relatively unsaturated.
+3. This plot makes good use of the dimensionless qualities of hue - they picked hues that were distinct from one another to really differentiate the neighborhoods controlled by different groups. One thing that they should have checked is that the plot is color blind friendly. One thing they did well is using low saturation since we are talking about relatively large, dense area maps. They also tried to make the data distinct from the background by making the background color a nondescript grey.
+
+## Plot 4
+
+1. This map is a chloropleth map of the most popular baseball teams in each American zip code according to number of Facebook fans. While data is numeric (proportions of fans in each zip code), the color takes on different hues according to which team is most popular and different luminance in accordance with *how much* popular the most popular team is relative to the other teams.
+2. There are two dimensions that are trying to be communicated here - primary team affiliation (which is unordered) and how popular that primary team is relative to other teams (sequential). The plot tries to accomplish this by assigning each team a color and then varying the luminance of zip codes where that team is most popular to communicate just how popular that team is.
+3. This is a complicated plot and I think the guidelines are a little bent here. The first is that while varying hue to communicate primary team affiliation was a good idea and the choice of low saturation was also great, it is difficult to see at a glance from just the colors where some teams are popular compared to other teams. This is because a lot of teams are assigned the same color and are proximally close to each other - for example, the Rangers, Cardinals, and Reds are all close to one another but have the same hue assignment. The authors were clearly trying to match up the hue in the chart with the hue of the actual baseball team logos, but since luminance has to vary as well to communicate relative popularity, the result can sometimes get confusing. This is particularly the case where no team has a clear plurality of fans, and the plot defaults to grey. There is no way to tell from color which team is most popular in that area and it requires drilling down to the individual zip code levels to find out. Lastly, the selected hues do not differ greatly from the background color, and it might have been better to just leave the background map out and just have the US.

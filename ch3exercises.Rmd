@@ -1,0 +1,102 @@
+---
+title: 'R for Data Science: Chapter 3'
+author: "Nick Sun"
+date: "April 8, 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## 3.2.4
+
+```{r, echo=FALSE}
+str(mpg)
+```
+
+## R Markdown
+
+```{r cars}
+ggplot(data =mpg)
+```
+
+I SEE NOTHING (of value that is).
+
+```{r}
+dim(mpg)
+```
+
+THERE ARE 234 ROWS AND 11 COLUMNS.
+
+
+This is a categorical variable.
+**f** stands for front-wheel drive, **r** stands for rear wheel drive, and **4** stands for a four wheel drive car.
+
+```{r, echo=FALSE}
+ggplot(data = mpg, aes(x = cyl, y = hwy)) +
+  geom_point()
+```
+
+```{r, echo=FALSE}
+ggplot(data = mpg, aes(x = class, y = drv)) +
+  geom_point()
+```
+
+This scatterplot really doesn't tell us anything.
+Almost all the different classes of cars have some cars that fall into one of the drive categories.
+
+## 3.3.1
+
+```{r, echo=FALSE}
+ggplot(data = mpg, aes(x = displ, y = hwy)) +
+  geom_point(color = "dodgerblue1")
+```
+
+The color aesthetic belongs in the `geom_point()` layer, not inside the `aes()` mapping layer.
+
+```{r, echo=FALSE}
+str(mpg)
+?mpg
+```
+
+Manufacturer, model, cyl, trans, drv, fl, and class are all categorical variables.
+The quantitative variables are displ, cty, hwy.
+I use the `str()` function which automatically displays the data type of each column in the tibble.
+
+```{r, echo=FALSE}
+ggplot(data = mpg, aes(x = displ, y = hwy, color = cty)) +
+  geom_point()
+
+ggplot(data = mpg, aes(x = displ, y = hwy, size = cty)) +
+  geom_point()
+
+# ggplot(data = mpg, aes(x = displ, y = hwy, shape = cty)) +
+#   geom_point()
+```
+
+Color mapped to a continuous variable creates a color gradient for each of the points.
+Likewise, the size variable creates a size gradient - bigger points correspond to larger values of displ.
+A continuous variable cannot be mapped to `shape`.
+
+```{r, echo=FALSE}
+ggplot(data = mpg, aes(x = displ, y = displ, color = displ)) +
+  geom_point()
+```
+
+You can do this, but it creates a pretty useless plot in my opinion.
+
+```{r, echo=FALSE}
+ggplot(data = mpg, aes(x = displ, y = hwy, stroke = 1.5)) +
+  geom_point(color = "#0038b8", shape = 11, size = 3, fill = "white")
+```
+
+The `stroke` aesthetic appears to change the width of the borders of each of the points.
+
+```{r}
+ggplot(data = mpg, aes(x = displ, y = hwy, color = displ < 5)) +
+  geom_point()
+```
+
+It binarizes the continuous variable! Pretty neat. 

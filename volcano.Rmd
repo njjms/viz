@@ -1,0 +1,59 @@
+---
+title: "Tidying some Volcano Data"
+author: "Nick Sun"
+date: "May 2, 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## Volcano Data
+
+We have the elevation data an 870m x 610m grid of Maunga Whau.
+If we are to make a heatmap, we are going to want to rearrange this 87x61 tibble into a 3 column tibble with 3 variables: X postion, Y postion, and elevation information.
+
+```{r volcano, include=FALSE}
+volcano_tbl <- as_tibble(volcano)
+colnames(volcano_tbl) <- 1:ncol(volcano) 
+volcano_tbl$row <- 1:nrow(volcano_tbl)
+
+volcano_tbl
+```
+
+First we need to add the Y coordinates, which we can assume are the row numbers.
+
+```{r echo=FALSE}
+volcano_tbl %>% 
+  mutate(latitude = row_number()) -> volcano_tbl
+
+volcano_tbl %>% 
+  gather(`1`:`61`, key = "longitude", value = "elevation") %>% 
+  select(latitude, longitude, elevation) -> volcano_tbl
+```
+
+```{r echo=FALSE}
+ggplot(volcano_tbl) +
+  geom_tile(mapping = aes(x = longitude, y = latitude, fill = elevation)) +
+  scale_fill_gradient(name = "Elevation (meters)",
+                      low = "azure",
+                      high = "firebrick") +
+  labs(title = "Elevation Heatmap of Maunga Whau",
+       subtitle = "Grid of 10m x 10m Squares",
+       x = "Longitude",
+       y = "Latitude") +
+  scale_x_discrete("Longitude",
+                     breaks = seq(0, 70, by=5)) +
+  scale_y_continuous("Latitude",
+                     breaks = seq(0, 80, by = 10)) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45),
+        legend.title = element_text(face = "italic"))
+```
+
+```{r echo=FALSE}
+volcano_tbl[19,]
+```
+
