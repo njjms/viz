@@ -2,3 +2,7 @@
 *.sqlite
 *.png
 *.rds
+*.txt
+*.doc
+*.xls
+*.xlsx

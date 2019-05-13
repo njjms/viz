@@ -1,6 +1,6 @@
 ---
 title: "R4DS Chapters 5 and 13"
-author: "Nick Sun"
+author: "Nick Sun, Lisa Wilson, Patrick Cummings, Prince Fefemwole, Yanli Wang"
 date: "May 8, 2019"
 output: pdf_document
 ---
@@ -17,8 +17,6 @@ library(maps)
 Which plane in the `flights` dataset has the worst on-time record?
 
 ```{r}
-colnames(flights)
-
 flights %>% 
   filter(!is.na(tailnum) & !is.na(arr_delay)) %>% 
   mutate(ontime = arr_delay <= 0) %>% 
@@ -42,7 +40,6 @@ For each flight, compute the total delay for its destination.
 For the first part of this question, we can do:
 
 ```{r}
-colnames(flights)
 
 flights %>% 
   filter(arr_delay >= 0) %>% 
@@ -93,11 +90,6 @@ flights %>%
     origin, dest, flight, flight_time_ratio, air_time, mean_air_time
   ) %>% 
   arrange(flight_time_ratio, desc(mean_air_time))
-
-# %>% 
-#   select(origin, dest, mean_air_time) %>% 
-#   distinct %>% 
-#   arrange(mean_air_time)
 ```
 
 Funkily short flights include flight 2132 (from LGA to BOS) and flight 1499 (from LGA to ATL) which had an air time of 65 minutes while the average air time is 113 minutes.
@@ -117,6 +109,9 @@ flights %>%
   head
 ```
 
+Here we printed out the most delayed flights.
+The top two most delayed flights originated from LaGuardia and were 5 and 4 times as long as the shortest flight time in that particular trip.
+
 ### 13.4.6 Problem 1
 
 Compute the average delay by destination then join on the airports dataframe so you can show the spatial distribution of delays
@@ -133,16 +128,15 @@ flights %>%
   select(dest, average_delay) -> delay_by_dest
 
 colnames(delay_by_dest) <- c("faa", "average_delay")
+```
 
-# airports %>% 
-#   left_join(delay_by_dest, by = "faa") %>% 
-#   ggplot(aes(lon, lat)) +
-#     borders("state") +
-#     geom_point(aes(fill = average_delay)) +
-#     coord_quickmap()
+Now we can use a standard `inner_join` to attach the latitude and longitude data to the `delay_by_dest` dataframe.
+R4DS suggests using `semi_join` but that shouldn't be necessary given that the `airports` dataframe should be a superset of `delay_by_dest`
+Then we simply map the color aesthetic to the `average_delay` variable.
 
+```{r}
 delay_by_dest %>% 
-  left_join(airports, by = "faa") %>% 
+  inner_join(airports, by = "faa") %>% 
   select(faa, average_delay, name, lat, lon) %>% 
   ggplot(aes(x = lon, y = lat)) +
     borders("state") +
@@ -151,7 +145,7 @@ delay_by_dest %>%
          x = "Longitude", 
          y = "Latitude") +
     geom_point(aes(color = average_delay),
-                   size = 2,
+                   size = 3,
                    alpha = .8) +
     scale_color_continuous("Average Delay",
                            low = "#ffff99", high = "#e60000") +
