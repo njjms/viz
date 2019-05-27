@@ -1,0 +1,265 @@
+---
+title: "Assignment 3 - EDA"
+author: "Nick Sun"
+date: "May 26, 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      warning=FALSE,
+                      message=FALSE,
+                      out.width="5in",
+                      fig.align="center")
+library(tidyverse)
+library(jsonlite)
+library(ggrepel)
+source("assignment3_functions.R")
+
+p5 <- c("Big Ten", "Big 12", "ACC", "Pac-12", "SEC")
+```
+
+#### College Football Analysis - Introduction
+
+The data I used is kept on a public API and contains everything from game scores, player stats, coaches salaries, talent rankings, to AP rankings (complete documentation can be found on https://api.collegefootballdata.com/api/docs/).
+I retrieved my data using the `jsonlite` R package and cleaned it using `dplyr`.
+I have also written several functions to hit certain API endpoints and have attached them as a `.R` file which I `source()` in this document.
+This API is maintained by Reddit user `/u/BlueSCar` who also serves as moderator for the `/r/CFBAnalysis` subreddit.
+
+#### Play Call Effectiveness between Conferences
+
+In my exploratory investigation, it quickly became apparent that **all** the conferences have roughly the same play-calling style - approximately 50% passing and 50% rushing.
+What was more interesting was the effectiveness of different types of plays among the different conferences.
+
+```{r pbpdata}
+# p5 <- c("Big Ten", "Big 12", "ACC", "Pac-12", "SEC")
+# 
+# big10 <- get_conf_pbp("B1G")
+# acc <- get_conf_pbp("ACC")
+# big12 <- get_conf_pbp("B12")
+# pac12 <- get_conf_pbp("PAC")
+# sec <- get_conf_pbp("SEC")
+# 
+# pbpdata <- rbind(big10, acc, big12, pac12, sec)
+# pbpdata <- pbpdata[!duplicated(pbpdata),]
+# 
+# write.csv(pbpdata, "pbpdata.csv")
+pbpdata <- read.csv("pbpdata.csv")
+```
+
+```{r out.height="3in",out.width="5in", fig.align="center"}
+pbpdata %>% 
+  filter(offense_conference %in% p5) %>% 
+  filter(play_type %in% c("Rush", "Rushing Touchdown", "Pass Reception", "Passing Touchdown")) %>% 
+  group_by(offense_conference, play_type) %>% 
+  summarise(
+    yardage = sum(yards_gained),
+    plays = n(),
+    ypp = yardage/plays
+  ) %>% 
+  mutate(
+    runorpass = ifelse(play_type %in% c("Pass Reception", "Passing Touchdown"), "Pass", "Rush")
+  ) %>% 
+  ggplot() + 
+  geom_bar(mapping = aes(x = play_type, y = ypp, fill = play_type), stat="identity") + 
+  facet_grid(
+    cols = vars(offense_conference)
+  ) +
+  labs(title = "The Majority of College Football Scoring is Explosive",
+       subtitle = "Plays which score have over double the average yardage than those which do not",
+       y = "Average Yards per Play",
+       x = "Types of Plays",
+       caption = "Among P5 Conferences in 2018, there is not much difference in average play effectiveness") +
+  scale_fill_manual(
+    "Types of Plays",
+    values=c("#D55E00","#E69F00",
+             "#0072B2","#56B4E9"),
+    labels = c("Pass", "Passing TD", "Rush", "Rush TD")
+  ) +
+  theme(
+    axis.text.x = element_blank()
+  )
+
+```
+
+Surprisingly, there is *little to no* practical difference between any of the conferences.
+Also in each conference *scoring plays have more than twice the average yardage*.
+I think this speaks to the immaturity of all college defenses to read offenses which results in most of the scoring in college football.
+
+#### Conference competitiveness
+
+Each of the Power 5 conferences claims to be balanced and competitive from top to bottom.
+I explored this using average margin of victory for matchups bewteen and within the conferences.
+
+```{r scoredata}
+# big10scores <- pythag_points("b1g")
+# accscores <- pythag_points("acc")
+# b12scores <- pythag_points("b12")
+# secscores <- pythag_points("sec")
+# pacscores <- pythag_points("pac")
+# 
+# scoredata <- rbind(big10scores, accscores, b12scores, secscores, pacscores)
+# 
+# big10scores <- pythag_points("b1g", "2017")
+# accscores <- pythag_points("acc", "2017")
+# b12scores <- pythag_points("b12", "2017")
+# secscores <- pythag_points("sec", "2017")
+# pacscores <- pythag_points("pac", "2017")
+# 
+# scoredata2 <- rbind(big10scores, accscores, b12scores, secscores, pacscores)
+# 
+# big10scores <- pythag_points("b1g", "2016")
+# accscores <- pythag_points("acc", "2016")
+# b12scores <- pythag_points("b12", "2016")
+# secscores <- pythag_points("sec", "2016")
+# pacscores <- pythag_points("pac", "2016")
+# 
+# scoredata3 <- rbind(big10scores, accscores, b12scores, secscores, pacscores)
+# 
+# big10scores <- pythag_points("b1g", "2015")
+# accscores <- pythag_points("acc", "2015")
+# b12scores <- pythag_points("b12", "2015")
+# secscores <- pythag_points("sec", "2015")
+# pacscores <- pythag_points("pac", "2015")
+# 
+# scoredata4 <- rbind(big10scores, accscores, b12scores, secscores, pacscores)
+# 
+# big10scores <- pythag_points("b1g", "2014")
+# accscores <- pythag_points("acc", "2014")
+# b12scores <- pythag_points("b12", "2014")
+# secscores <- pythag_points("sec", "2014")
+# pacscores <- pythag_points("pac", "2014")
+# 
+# scoredata5 <- rbind(big10scores, accscores, b12scores, secscores, pacscores)
+# 
+# scoredata_final <- rbind(scoredata, scoredata2, scoredata3, scoredata4, scoredata5)
+# write.csv(scoredata_final, "scoredata.csv")
+
+scoredata_final <- read.csv("scoredata.csv")
+```
+
+```{r marginofvictory, out.height="4in", out.width="4in", fig.align = "center"}
+scoredata_final %>% 
+  group_by(winning_conference, losing_conference) %>% 
+  summarise(
+    average_margin = mean(margin_of_victory),
+    number_of_games = n()
+  ) %>% 
+  filter(winning_conference %in% p5 & losing_conference %in% p5) %>% 
+  ggplot() +
+  geom_tile(mapping = aes(x = winning_conference, y = losing_conference, fill = average_margin)) +
+  labs(
+    title = "Within-conference Margins of Victory are very similar",
+    subtitle = "In out of conference play, the Big 12 wins big.\nThe Pac-12 has to gut them out.",
+    x = "Winning Conference",
+    y = "Losing Conference",
+    caption = "Numbers indicate number of games.\nData is from the 2014-2018 regular seasons."
+   ) +
+  geom_text(mapping = aes(x = winning_conference, y = losing_conference, label = number_of_games)) +
+  scale_fill_continuous(
+    "Average\nMargin of Victory", low = "white", high = "red"
+  )
+```
+
+Intraconference margin of victory is pretty consistent between the conferences, so no conference stands out as being more unbalanced than the others.
+In inter-conference games, the Big 12 usually wins big while the Pac-12 usually only edge their opponents.
+
+#### Does talent correspond to a better team?
+
+A popular metric for recruiting is the *team talent composite* where a team with a high composite recruits the best players.
+I compared the talent composites of each P5 team with the points they scored in 2018.
+
+```{r teams_by_conference}
+# teams_by_conference <- fromJSON("https://api.collegefootballdata.com/teams")
+# unique(teams_by_conference$conference)
+# 
+# teams_by_conference %>% 
+#   group_by(conference) %>% 
+#   summarise(
+#     number_of_teams = n()
+#   ) -> number_of_teams_by_conf
+
+# pythagorean_points <- left_join(pythagorean_points, number_of_teams_by_conf)
+
+# pythagorean_points %>% 
+#   filter(conference %in% p5) %>% 
+#   mutate(
+#     points_per_team = `points for`/number_of_teams
+#   ) %>% 
+#   ggplot() + geom_bar(mapping = aes(x = reorder(conference, desc(points_per_team)), y = points_per_team), stat = "identity")
+```
+
+```{r conference_points_by_team}
+# big10pbt <- conf_points_by_team("b1g")
+# secpbt <- conf_points_by_team("sec")
+# accpbt <- conf_points_by_team("acc")
+# b12pbt <- conf_points_by_team("b12")
+# pacpbt <- conf_points_by_team("pac")
+# indpbt <- conf_points_by_team("ind")
+# 
+# allpbt <- rbind(big10pbt, secpbt, accpbt, b12pbt, pacpbt, indpbt)
+# 
+# allpbt %>% 
+#   filter(total_points > 100) -> allpbt
+# 
+# allpbt <- arrange(allpbt, desc(total_points))
+# allpbt <- allpbt[!duplicated(arrange(allpbt, desc(total_points))$team),]
+
+# write.csv(allpbt, "allpbt.csv")
+```
+
+```{r joining talent w points}
+# allpbt <- read.csv("allpbt.csv")
+# 
+# talent <- fromJSON("https://api.collegefootballdata.com/talent?year=2018")
+# talent <- talent[,2:3]
+# colnames(talent) <- c("team", "talent")
+# 
+# ptsvstalent <- left_join(allpbt, talent)
+# 
+# teams_by_conference %>% 
+#   filter(conference %in% p5) %>% 
+#   select(team, conference) -> teams_by_conference
+# 
+# left_join(ptsvstalent, teams_by_conference) -> ptsvstalent
+# 
+# ptsvstalent %>% 
+#   filter(!is.na(conference)) -> ptsvstalent
+# 
+# ptsvstalent$talent <- as.numeric(ptsvstalent$talent)
+# 
+# write.csv(ptsvstalent, "ptsvstalent.csv")
+
+ptsvstalent <- read.csv("ptsvstalent.csv")
+```
+
+```{r talentvspoints, out.height="4in",out.width="6in", fig.align="center"}
+ggplot() +
+  geom_point(ptsvstalent, mapping = aes(x = talent,
+                                        y = total_points,
+                                        color = conference),
+             size = 2.5) +
+  geom_text_repel(ptsvstalent,mapping = aes(x = talent,
+                                      y = total_points+7,
+                                      label = team),
+            size = 1.7) +
+  labs(
+    title = "For most schools, talent doesn't impact scoring",
+    subtitle = "Only Oklahoma, Alabama, Clemson, and Ohio St are in a league apart",
+    y = "Total Points Scored in 2018"
+  ) +
+  theme_minimal() +
+  scale_x_continuous("Team Talent Composite Score",
+                     breaks = seq(200, 1000, by = 50)) +
+  scale_color_manual("Conference",
+                    values = c("#E69F00",
+                               "#D55E00",
+                               "#56B4E9",
+                               "#0072B2",
+                               "#009E73")) +
+  theme(
+    legend.position = "top"
+  )
+```
+
+Talent alone doesn't build championships (as Alabama and company demonstrate, you also probably need money).

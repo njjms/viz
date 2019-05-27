@@ -1,0 +1,79 @@
+---
+title: "Variability Plot"
+author: "Nick Sun"
+date: "May 26, 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      message=FALSE,
+                      warning = FALSE)
+library(tidyverse)
+library(hflights)
+```
+
+## Variability plot
+
+Let's give a shot at recreating the 25th-75th quantile dot plot in R.
+It looks pretty handy to know and easy to digest for readers.
+
+```{r}
+hflights_df <- as_tibble(hflights)
+
+hflights_df <- mutate(hflights_df, 
+  DepHour = floor(DepTime/100),
+  DayOfWeek = factor(DayOfWeek, 
+    labels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")),
+  Date = ISOdate(Year, Month, DayofMonth)
+)
+hou <- filter(hflights_df, Origin == "HOU")
+
+hou_mon <- filter(hou, DayOfWeek == "Mon")
+
+# over all mondays in 2011, avg delay of flights departing by hour
+hou_mon_avg <- hou_mon %>%
+  group_by(DepHour) %>%
+  summarise(avg_delay = mean(DepDelay))
+
+# initial plot
+ggplot(hou_mon_avg, aes(DepHour, avg_delay)) + 
+  geom_point() +
+  geom_line() + 
+  ylab("Average delay (mins)") +
+  xlab("Departure time") +
+  scale_x_continuous(breaks = seq(0, 24, 6),
+    labels = c("midnight", "6am", "noon", "6pm", "midnight")) +
+  theme_bw(18)
+ggsave("08-monday.png", width = 6, height = 4)
+
+# for each monday in 2011, avg delay of flights departing by hour
+hou_mon_day <- filter(hou, DayOfWeek == "Mon") %>%
+  group_by(Date, DepHour) %>%
+  summarise(avg_delay = mean(DepDelay))
+
+# quantiles for delay by time
+hou_mon_q <- hou_mon %>% group_by(DepHour) %>%
+  summarise(n = n(),
+    q25 = quantile(DepDelay, probs = 0.25, na.rm = TRUE),
+    q50 = quantile(DepDelay, probs = 0.5, na.rm = TRUE),
+    q75 = quantile(DepDelay, probs = 0.75, na.rm = TRUE))
+```
+
+```{r out.width="5in", fig.align="center"}
+hou_mon_q %>% 
+  ggplot() +
+  geom_point(mapping=aes(x = DepHour, y = q25), size = 1, color = "azure4") +
+  geom_point(mapping=aes(x = DepHour, y = q50), size = 2) +
+  geom_point(mapping=aes(x = DepHour, y = q75), size = 1, color = "azure4") +
+  labs(
+    title = "Delays by Departure Hour",
+    subtitle = "Departures usually aren't too late until around 10pm departure",
+    x = "Departure Time",
+    y = "Average Delay (min)",
+    caption = "Black center points are the median delay, the grey dots are the 25th and 75th quantiles"
+  ) +
+  theme_bw()
+```
+
+Most of the departure times in the middle of the day have relatively low variability, but once the average delays increase late at night and early in the morning, the variability also increases.
