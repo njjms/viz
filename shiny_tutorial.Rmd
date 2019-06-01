@@ -1,0 +1,56 @@
+---
+title: "Shiny Tutorial"
+author: "Nick Sun"
+date: "June 1, 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(shiny)
+```
+
+# Basic Shiny Architecture
+
+Garrett recommends starting off each app using this same basic template:
+
+```{r cars}
+ui <- fluidPage(
+  # Input functions - every function needs an input name and a label
+  # Example:
+  sliderInput(inputID = "num", label = "Choose a number")
+  
+  # Output functions
+  plotOutput("hist")
+)
+
+server <- function(input, output){}
+
+shinyApp(ui = ui, server = server)
+```
+We add elements using fluidPage which contains both inputs and outputs.
+For our inputs in our CFB data, we probably want to use a selectInput() to pick a conference and then checkboxGroupInput() to make the team selectors within each conference.
+
+```{r server}
+server <- function(input, output) {
+  output$hist <- renderPlot({
+    hist(rnorm(input$num))
+  })
+}
+
+```
+
+For the server function, we always save objects to `output$[name of object in fluidPage]`.
+We build objects in the server function using `render...` functions, for example `renderPlot({})`.
+The curly braces allow us to put multiple lines of R code inside of the render function.
+
+We can access our input values within the server function using `input$[object of input]`.
+
+When sharing your app, you have to either name your app as `app.R` or split the app into two files for the ui and server functions: `ui.R` and `server.R` respectively.
+
+You can deploy apps directly to `shinyapps.io` using the following command:
+
+```{r}
+library(rsconnect)
+rsconnect::deployApp('path/to/your/app')
+```
