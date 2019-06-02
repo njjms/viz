@@ -12,6 +12,9 @@ library(shiny)
 
 # Basic Shiny Architecture
 
+There are two pieces to every Shiny App: a UI component and a server component.
+Both of these components are functions defined within your app and eventually get placed into 
+
 Garrett recommends starting off each app using this same basic template:
 
 ```{r cars}
