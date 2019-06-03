@@ -1,229 +1,251 @@
 library(shiny)
 library(tidyverse)
 library(ggrepel)
+library(shinyjs)
 
 wintalentdata <- read.csv("wintalentdata.csv")
 
+b10_teams <- c("Ohio State",
+               "Michigan",
+               "Penn State",
+               "Maryland",
+               "Nebraska",
+               "Michigan State",
+               "Wisconsin",
+               "Iowa",
+               "Northwestern",
+               "Minnesota",
+               "Indiana",
+               "Illinois",
+               "Rutgers",
+               "Purdue")
+
+sec_teams <- c("Alabama",
+               "Georgia",
+               "LSU",
+               "Florida",
+               "Auburn",
+               "Tennessee",
+               "Texas A&M",
+               "South Carolina",
+               "Ole Miss",
+               "Mississippi State",
+               "Arkansas",
+               "Kentucky",
+               "Vanderbilt",
+               "Missouri")
+
+b12_teams <- c("Texas",
+               "Oklahoma",
+               "TCU",
+               "Baylor",
+               "West Virginia",
+               "Oklahoma State",
+               "Iowa State",
+               "Texas Tech",
+               "Kansas State",
+               "Kansas")
+
+p12_teams <- c("USC",
+               "Stanford",
+               "Washington",
+               "UCLA",
+               "Oregon",
+               "Arizona State",
+               "California",
+               "Utah",
+               "Arizona",
+               "Colorado",
+               "Washington State",
+               "Oregon State")
+
+acc_teams <- c("Clemson",
+               "Florida State",
+               "Miami",
+               "North Carolina",
+               "Virginia Tech",
+               "Pittsburgh",
+               "Duke",
+               "Louisville",
+               "NC State",
+               "Georgia Tech",
+               "Syracuse",
+               "Virginia",
+               "Boston College",
+               "Wake Forest")
+
+ind_teams <- c("Notre Dame",
+               "BYU",
+               "UMass",
+               "Army")
+
+aac_teams <- c("Houston",
+               "UCF",
+               "South Florida",
+               "Cincinnati",
+               "SMU",
+               "Memphis",
+               "Temple",
+               "Tulane",
+               "East Carolina",
+               "Connecticut",
+               "Tulsa",
+               "Navy")
+               
+cusa_teams <- c("Florida Atlantic",
+                 "Louisiana Tech",
+                 "Florida International",
+                 "Marshall",
+                 "Middle Tennessee",
+                 "UT San Antonio",
+                 "UAB",
+                 "Southern Mississippi",
+                 "Rice",
+                 "North Texas",
+                 "Western Kentucky",
+                 "UTEP",
+                 "Old Dominion",
+                 "Charlotte")
+
+sun_teams <- c("Appalachian State",
+               "Arkansas State",
+               "Coastal Carolina",
+               "Georgia Southern",
+               "Georgia State",
+               "Louisiana",
+               "Louisiana Monroe",
+               "South Alabama",
+               "Texas State",
+               "Troy")
+               
+mid_teams <- c("Toledo",
+               "Eastern Michigan",
+               "Western Michigan",
+               "Northern Illinois",
+               "Miami (OH)",
+               "Central Michigan",
+               "Bowling Green",
+               "Buffalo",
+               "Ball State",
+               "Akron",
+               "Kent State",
+               "Ohio")
+
+mw_teams <- c("Boise State",
+              "Colorado State", 
+              "San Diego State",
+              "Fresno State",
+              "Nevada",
+              "San José State",
+              "New Mexico",
+              "UNLV",
+              "Utah State",
+              "Wyoming",
+              "Hawai'i",
+              "Air Force")
+
 ui <- fluidPage(
   
+  useShinyjs(),
+  
+  titlePanel("Wins vs. Talent Composite Score in D1 FBS"),
+  
   sidebarPanel(
+    
+    sliderInput("range", "Years to Examine", min = 2015, max = 2018, step = 1, value = c(2015, 2018), sep = ""),
     selectInput(inputId = "conference", label = "Select a conference",
                 choices = unique(wintalentdata$conference)[order(unique(wintalentdata$conference))][-12]
                 ),
+    # h3("Team Selector"),
     conditionalPanel(
       condition = "input.conference == 'Big Ten'",
+      checkboxInput("allb10", "Select All Big Ten Teams", value = FALSE),
       checkboxGroupInput(inputId = "b10_teams", label = "Teams",
-                         choices = c("Ohio State",
-                                     "Michigan",
-                                     "Penn State",
-                                     "Maryland",
-                                     "Nebraska",
-                                     "Michigan State",
-                                     "Wisconsin",
-                                     "Iowa",
-                                     "Northwestern",
-                                     "Minnesota",
-                                     "Indiana",
-                                     "Illinois",
-                                     "Rutgers",
-                                     "Purdue"),
+                         choices = b10_teams,
                          selected = c()
     )
   ),
     conditionalPanel(
       condition = "input.conference == 'SEC'",
+      checkboxInput("allsec", "Select All SEC Teams", value = FALSE),
       checkboxGroupInput(inputId = "sec_teams", label = "Teams",
-                         choices = c(
-                           "Alabama",
-                           "Georgia",
-                           "LSU",
-                           "Florida",
-                           "Auburn",
-                           "Tennessee",
-                           "Texas A&M",
-                           "South Carolina",
-                           "Ole Miss",
-                           "Mississippi State",
-                           "Arkansas",
-                           "Kentucky",
-                           "Vanderbilt",
-                           "Missouri"
-                         ),
+                         choices = sec_teams,
                          selected = c()
     )
   ),
     conditionalPanel(
       condition = "input.conference == 'Big 12'",
+      checkboxInput("allb12", "Select All Big 12 Teams", value = FALSE),
       checkboxGroupInput(inputId = "b12_teams", label = "Teams",
-                         choices = c(
-                           "Texas",
-                           "Oklahoma",
-                           "TCU",
-                           "Baylor",
-                           "West Virginia",
-                           "Oklahoma State",
-                           "Iowa State",
-                           "Texas Tech",
-                           "Kansas State",
-                           "Kansas"
-                         ),
+                         choices = b12_teams,
                          selected = c()
     )
   ),
   conditionalPanel(
       condition = "input.conference == 'Pac-12'",
+      checkboxInput("allp12", "Select All Pac-12 Teams", value = FALSE),
       checkboxGroupInput(inputId = "p12_teams", label = "Teams",
-                         choices = c(
-                           "USC",
-                           "Stanford",
-                           "Washington",
-                           "UCLA",
-                           "Oregon",
-                           "Arizona State",
-                           "California",
-                           "Utah",
-                           "Arizona",
-                           "Colorado",
-                           "Washington State",
-                           "Oregon State"
-                         ),
+                         choices = p12_teams,
                          selected = c()
     )
   ),
   conditionalPanel(
       condition = "input.conference == 'ACC'",
+      checkboxInput("allacc", "Select All ACC Teams", value = FALSE),
       checkboxGroupInput(inputId = "acc_teams", label = "Teams",
-                         choices = c(
-                           "Clemson",
-                           "Florida State",
-                           "Miami",
-                           "North Carolina",
-                           "Virginia Tech",
-                           "Pittsburgh",
-                           "Duke",
-                           "Louisville",
-                           "NC State",
-                           "Georgia Tech",
-                           "Syracuse",
-                           "Virginia",
-                           "Boston College",
-                           "Wake Forest"
-                         ),
+                         choices = acc_teams,
                          selected = c()
     )
   ),
   conditionalPanel(
       condition = "input.conference == 'FBS Independents'",
+      checkboxInput("allind", "Select All Independent Teams", value = FALSE),
       checkboxGroupInput(inputId = "ind_teams", label = "Teams",
-                         choices = c(
-                           "Notre Dame",
-                           "BYU",
-                           "UMass",
-                           "Army"
-                         ),
+                         choices = ind_teams,
                          selected = c()
     )
   ),
   conditionalPanel(
       condition = "input.conference == 'American Athletic'",
+      checkboxInput("allaac", "Select All AAC Teams", value = FALSE),
       checkboxGroupInput(inputId = "aac_teams", label = "Teams",
-                         choices = c(
-                           "Houston",
-                           "UCF",
-                           "South Florida",
-                           "Cincinnati",
-                           "SMU",
-                           "Memphis",
-                           "Temple",
-                           "Tulane",
-                           "East Carolina",
-                           "Connecticut",
-                           "Tulsa",
-                           "Navy"
-                         ),
+                         choices = aac_teams,
                          selected = c()
     )
   ),
   conditionalPanel(
       condition = "input.conference == 'Conference USA'",
+      checkboxInput("allcusa", "Select All Conference USA Teams", value = FALSE),
       checkboxGroupInput(inputId = "cusa_teams", label = "Teams",
-                         choices = c(
-                           "Florida Atlantic",
-                           "Louisiana Tech",
-                           "Florida International",
-                           "Marshall",
-                           "Middle Tennessee",
-                           "UT San Antonio",
-                           "UAB",
-                           "Southern Mississippi",
-                           "Rice",
-                           "North Texas",
-                           "Western Kentucky",
-                           "UTEP",
-                           "Old Dominion",
-                           "Charlotte"
-                         ),
+                         choices = cusa_teams,
                          selected = c()
     )
   ),
   conditionalPanel(
       condition = "input.conference == 'Mid-American'",
+      checkboxInput("allmid", "Select All Mid-American Teams", value = FALSE),
       checkboxGroupInput(inputId = "mid_teams", label = "Teams",
-                         choices = c(
-                           "Toledo",
-                           "Eastern Michigan",
-                           "Western Michigan",
-                           "Northern Illinois",
-                           "Miami (OH)",
-                           "Central Michigan",
-                           "Bowling Green",
-                           "Buffalo",
-                           "Ball State",
-                           "Akron",
-                           "Kent State",
-                           "Ohio"
-                         ),
+                         choices = mid_teams,
                          selected = c()
     )
   ),
   conditionalPanel(
       condition = "input.conference == 'Sun Belt'",
+      checkboxInput("allsun", "Select All Sun Belt Teams", value = FALSE),
       checkboxGroupInput(inputId = "sun_teams", label = "Teams",
-                         choices = c(
-                           "Appalachian State",
-                           "Arkansas State",
-                           "Coastal Carolina",
-                           "Georgia Southern",
-                           "Georgia State",
-                           "Louisiana",
-                           "Louisiana Monroe",
-                           "South Alabama",
-                           "Texas State",
-                           "Troy"
-                         ),
+                         choices = sun_teams,
                          selected = c()
     )
   ),
   conditionalPanel(
       condition = "input.conference == 'Mountain West'",
+      checkboxInput("allmw", "Select All Mountain West Teams", value = FALSE),
       checkboxGroupInput(inputId = "mw_teams", label = "Teams",
-                         choices = c(
-                           "Boise State",
-                           "Colorado State", 
-                           "San Diego State",
-                           "Fresno State",
-                           "Nevada",
-                           "San José State",
-                           "New Mexico",
-                           "UNLV",
-                           "Utah State",
-                           "Wyoming",
-                           "Hawai'i",
-                           "Air Force"
-                         ),
+                         choices = mw_teams,
                          selected = c()
     )
-  )
+  ),
+  actionButton("clear", "Clear All Selections")
   ),
   mainPanel(
     plotOutput(outputId = "plot", height = "700px")
@@ -231,38 +253,148 @@ ui <- fluidPage(
 )
 
 
-server <- function(input, output) {
+server <- function(input, output, session) {
+  
+  observe({
+    updateCheckboxGroupInput(session,
+                             'b10_teams',
+                             choices = b10_teams,
+                             selected = if(input$allb10) b10_teams)
+  })
+  
+  observe({
+    updateCheckboxGroupInput(session,
+                             'sec_teams',
+                             choices = sec_teams,
+                             selected = if(input$allsec) sec_teams)
+  })
+  
+  observe({
+    updateCheckboxGroupInput(session,
+                             'acc_teams',
+                             choices =acc_teams,
+                             selected = if(input$allacc) acc_teams)
+  })
+  
+  
+  observe({
+    updateCheckboxGroupInput(session,
+                             'b12_teams',
+                             choices = b12_teams,
+                             selected = if(input$allb12) b12_teams)
+  })
+  
+  observe({
+    updateCheckboxGroupInput(session,
+                             'p12_teams',
+                             choices = p12_teams,
+                             selected = if(input$allp12) p12_teams)
+  })
+  
+  
+  observe({
+    updateCheckboxGroupInput(session,
+                             'ind_teams',
+                             choices = ind_teams,
+                             selected = if(input$allind) ind_teams)
+  })
+  
+  observe({
+    updateCheckboxGroupInput(session,
+                             'mid_teams',
+                             choices = mid_teams,
+                             selected = if(input$allmid) mid_teams)
+  })
+  
+  observe({
+    updateCheckboxGroupInput(session,
+                             'aac_teams',
+                             choices = aac_teams,
+                             selected = if(input$allaac) aac_teams)
+  })
+  
+  observe({
+    updateCheckboxGroupInput(session,
+                             'sun_teams',
+                             choices = sun_teams,
+                             selected = if(input$allsun) sun_teams)
+  })
+  
+  observe({
+    updateCheckboxGroupInput(session,
+                             'mw_teams',
+                             choices = mw_teams,
+                             selected = if(input$allmw) mw_teams)
+  })
+  
+  observe({
+    updateCheckboxGroupInput(session,
+                             'cusa_teams',
+                             choices = cusa_teams,
+                             selected = if(input$allcusa) cusa_teams)
+  })
+  
+  selectedteams <- reactive({
+    wintalentdata %>% filter(school %in% c(input$b10_teams,
+                                           input$b12_teams,
+                                           input$sec_teams,
+                                           input$acc_teams,
+                                           input$p12_teams,
+                                           input$mid_teams,
+                                           input$aac_teams,
+                                           input$sun_teams,
+                                           input$mw_teams,
+                                           input$cusa_teams,
+                                           input$ind_teams) &
+                               season %in% seq(input$range[1], input$range[2], by = 1))
+    
+  })
+  
+  observeEvent(input$clear, {
+    reset("b10_teams")
+    reset("allb10")
+    reset("acc_teams")
+    reset("allacc")
+    reset("b12_teams")
+    reset("allb12")
+    reset("p12_teams")
+    reset("allp12")
+    reset("sec_teams")
+    reset("allsec")
+    reset("ind_teams")
+    reset("allind")
+    reset("aac_teams")
+    reset("allaac")
+    reset("mid_teams")
+    reset("allmid")
+    reset("sun_teams")
+    reset("allsun")
+    reset("mw_teams")
+    reset("allmw")
+    reset("cusa_teams")
+    reset("allcusa")
+  })
   
   output$plot <- renderPlot({
-    wintalentdata %>% 
-      filter(school %in% c(input$b10_teams,
-                           input$b12_teams,
-                           input$sec_teams,
-                           input$acc_teams,
-                           input$p12_teams,
-                           input$mid_teams,
-                           input$aac_teams,
-                           input$sun_teams,
-                           input$mw_teams,
-                           input$cusa_teams,
-                           input$ind_teams)) %>% 
-      ggplot() +
+    
+      ggplot(selectedteams()) +
       geom_point(mapping = aes(x = wins, y = `talent.rating`, color = school), alpha = .5, size = 2) +
       geom_path(mapping = aes(x = wins, y = `talent.rating`, color = school), size = 1.0) +
       geom_text_repel(mapping = aes(x = wins, y = `talent.rating`, label = paste(school, season)), size = 3) + 
       scale_color_manual(
-        values = as.character(unique(select(arrange(subset(wintalentdata, conference == input$conference), school), c("school", "color")))$color)
+        values = as.character(unique(select(arrange(selectedteams(), school), c("school", "color")))$color)
       ) +
-      scale_x_continuous("number of wins", 
-                       breaks = seq(0, 12, 1)) +
-      labs(
-        title = "wins vs. talent composite score",
-        y = "composite talent score"
-      ) +
+      scale_x_continuous("Number of Wins",
+                         limits = c(0, 13),
+                         breaks = seq(0, 13, 1)) +
+      scale_y_continuous("Composite Talent Score",
+                         breaks = seq(0, 1000, 100)) +
       theme(
-        legend.position = "none"
+        legend.position = "none",
+        panel.grid.minor.x = element_blank()
       )
   })
+  
 }
 
 shinyApp(ui = ui, server = server)
