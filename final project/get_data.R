@@ -1,6 +1,7 @@
 library(jsonlite)
 library(tidyverse)
 library(ggrepel)
+library(stringr)
 
 #### Getting talent data for the past 10 years
 
@@ -62,6 +63,64 @@ colorurl <- "https://api.collegefootballdata.com/teams"
 colors <- fromJSON(colorurl) %>% 
   select(school, color)
 
+#### Getting coaching data
+
+coaches2018 <- fromJSON("https://api.collegefootballdata.com/coaches?year=2018")
+coaches2017 <- fromJSON("https://api.collegefootballdata.com/coaches?year=2017")
+coaches2016 <- fromJSON("https://api.collegefootballdata.com/coaches?year=2016")
+coaches2015 <- fromJSON("https://api.collegefootballdata.com/coaches?year=2015")
+
+coaches <- rbind(coaches2018, coaches2017, coaches2016, coaches2015)
+
+head(coaches)
+subset(coaches, last_name == "Kiffin")
+
+strsplit(coaches$seasons[1], ",")
+?strsplit
+
+sapply(coaches$season, strsplit(split = ","))
+
+head(str(coaches$seasons))
+str(coaches$seasons[[1]])
+unique(coaches$seasons[[1]])
+
+coaches_data <- data.frame(school = character(), season = numeric(), coach_name = character(), postseason_rank = numeric())
+
+for (coach in 1:length(coaches$first_name)) {
+  
+  coach_name <- paste(coaches[coach,"first_name"], coaches[coach, "last_name"])
+  
+  df <- unique(coaches$seasons[[coach]])[1,]
+  school <- as.character(df$school)
+  season <- as.numeric(df$year)
+  postseason_rank <- df$postseason_rank
+  
+  coachdata <- data.frame(school, season, coach_name, postseason_rank)
+  
+  coaches_data <- rbind(coaches_data, coachdata)
+}
+
+unique(coaches_data)
+
+str(coaches_data)
+coaches_data[coaches_data$school == "Ohio State",]
+
+str(coaches_data)
+
+unique(coaches_data) %>% 
+  group_by(school, season) %>% 
+  summarise(
+    coaches = as.character(get_coach_name(coach_name))
+  ) -> coaches_data
+
+get_coach_name <- function(names) {
+  if (length(unique(names)) == 1){
+    return(names[1])
+  } else {
+    return(paste(names, collapse = ', '))
+  }
+}
+
 #### joining
 
 head(games)
@@ -72,7 +131,11 @@ wintalentdata <- inner_join(talent, games, by = c("season", "school"))
 wintalentdata$`talent rating` <- as.numeric(as.character(wintalentdata$`talent rating`))
 wintalentdata <- left_join(wintalentdata, conferences, by = "school")
 wintalentdata <- left_join(wintalentdata, colors, by = "school")
-head(wintalentdata)
+wintalentdata <- left_join(wintalentdata, coaches_data, by = c("school", "season"))
+
+filter(left_join(wintalentdata, coaches_data, by = c("school", "season")), is.na(coaches))
+filter(left_join(wintalentdata, coaches_data, by = c("school", "season")), school == "Oregon State")
+
 
 unique(wintalentdata$conference)
 write.csv(wintalentdata, file = "wintalentdata.csv")
