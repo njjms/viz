@@ -136,6 +136,7 @@ wintalentdata <- left_join(wintalentdata, coaches_data, by = c("school", "season
 filter(left_join(wintalentdata, coaches_data, by = c("school", "season")), is.na(coaches))
 filter(left_join(wintalentdata, coaches_data, by = c("school", "season")), school == "Oregon State")
 
+head(wintalentdata)
 
 unique(wintalentdata$conference)
 write.csv(wintalentdata, file = "wintalentdata.csv")

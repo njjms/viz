@@ -2,8 +2,10 @@ library(shiny)
 library(tidyverse)
 library(ggrepel)
 library(shinyjs)
+library(plotly)
 
 wintalentdata <- read.csv("wintalentdata.csv")
+colnames(wintalentdata) <- c("X", "X1", "Season", "School", "Talent Rating", "Wins", "conference", "color", "coaches")
 
 b10_teams <- c("Ohio State",
                "Michigan",
@@ -136,7 +138,7 @@ mw_teams <- c("Boise State",
               "San Diego State",
               "Fresno State",
               "Nevada",
-              "San José State",
+              "San Jose State",
               "New Mexico",
               "UNLV",
               "Utah State",
@@ -148,9 +150,14 @@ ui <- fluidPage(
   
   useShinyjs(),
   
-  titlePanel("Wins vs. Talent Composite Score in D1 FBS"),
+  titlePanel("How is roster talent related to wins in D1 College Football?"),
+  helpText("Talent Composite Score is taken from 247Sports and evaluates the roster rankings and ratings.",
+           "Data is for regular season wins only."),
   
   sidebarPanel(
+    
+    helpText("Filter through different football conferences using the dropdown selector. Select teams to display using the checkboxes."),
+    helpText("Teams from different conferences can be displayed at the same time."),
     
     sliderInput("range", "Years to Examine", min = 2015, max = 2018, step = 1, value = c(2015, 2018), sep = ""),
     selectInput(inputId = "conference", label = "Select a conference",
@@ -159,7 +166,7 @@ ui <- fluidPage(
     # h3("Team Selector"),
     conditionalPanel(
       condition = "input.conference == 'Big Ten'",
-      checkboxInput("allb10", "Select All Big Ten Teams", value = FALSE),
+      checkboxInput("allb10", "Select/Deselect All Big Ten Teams", value = FALSE),
       checkboxGroupInput(inputId = "b10_teams", label = "Teams",
                          choices = b10_teams,
                          selected = c()
@@ -167,7 +174,7 @@ ui <- fluidPage(
   ),
     conditionalPanel(
       condition = "input.conference == 'SEC'",
-      checkboxInput("allsec", "Select All SEC Teams", value = FALSE),
+      checkboxInput("allsec", "Select/Deselect All SEC Teams", value = FALSE),
       checkboxGroupInput(inputId = "sec_teams", label = "Teams",
                          choices = sec_teams,
                          selected = c()
@@ -175,7 +182,7 @@ ui <- fluidPage(
   ),
     conditionalPanel(
       condition = "input.conference == 'Big 12'",
-      checkboxInput("allb12", "Select All Big 12 Teams", value = FALSE),
+      checkboxInput("allb12", "Select/Deselect All Big 12 Teams", value = FALSE),
       checkboxGroupInput(inputId = "b12_teams", label = "Teams",
                          choices = b12_teams,
                          selected = c()
@@ -183,7 +190,7 @@ ui <- fluidPage(
   ),
   conditionalPanel(
       condition = "input.conference == 'Pac-12'",
-      checkboxInput("allp12", "Select All Pac-12 Teams", value = FALSE),
+      checkboxInput("allp12", "Select/Deselect All Pac-12 Teams", value = FALSE),
       checkboxGroupInput(inputId = "p12_teams", label = "Teams",
                          choices = p12_teams,
                          selected = c()
@@ -191,7 +198,7 @@ ui <- fluidPage(
   ),
   conditionalPanel(
       condition = "input.conference == 'ACC'",
-      checkboxInput("allacc", "Select All ACC Teams", value = FALSE),
+      checkboxInput("allacc", "Select/Deselect All ACC Teams", value = FALSE),
       checkboxGroupInput(inputId = "acc_teams", label = "Teams",
                          choices = acc_teams,
                          selected = c()
@@ -199,7 +206,7 @@ ui <- fluidPage(
   ),
   conditionalPanel(
       condition = "input.conference == 'FBS Independents'",
-      checkboxInput("allind", "Select All Independent Teams", value = FALSE),
+      checkboxInput("allind", "Select/Deselect All Independent Teams", value = FALSE),
       checkboxGroupInput(inputId = "ind_teams", label = "Teams",
                          choices = ind_teams,
                          selected = c()
@@ -207,7 +214,7 @@ ui <- fluidPage(
   ),
   conditionalPanel(
       condition = "input.conference == 'American Athletic'",
-      checkboxInput("allaac", "Select All AAC Teams", value = FALSE),
+      checkboxInput("allaac", "Select/Deselect All AAC Teams", value = FALSE),
       checkboxGroupInput(inputId = "aac_teams", label = "Teams",
                          choices = aac_teams,
                          selected = c()
@@ -215,7 +222,7 @@ ui <- fluidPage(
   ),
   conditionalPanel(
       condition = "input.conference == 'Conference USA'",
-      checkboxInput("allcusa", "Select All Conference USA Teams", value = FALSE),
+      checkboxInput("allcusa", "Select/Deselect All Conference USA Teams", value = FALSE),
       checkboxGroupInput(inputId = "cusa_teams", label = "Teams",
                          choices = cusa_teams,
                          selected = c()
@@ -223,7 +230,7 @@ ui <- fluidPage(
   ),
   conditionalPanel(
       condition = "input.conference == 'Mid-American'",
-      checkboxInput("allmid", "Select All Mid-American Teams", value = FALSE),
+      checkboxInput("allmid", "Select/Deselect All Mid-American Teams", value = FALSE),
       checkboxGroupInput(inputId = "mid_teams", label = "Teams",
                          choices = mid_teams,
                          selected = c()
@@ -231,7 +238,7 @@ ui <- fluidPage(
   ),
   conditionalPanel(
       condition = "input.conference == 'Sun Belt'",
-      checkboxInput("allsun", "Select All Sun Belt Teams", value = FALSE),
+      checkboxInput("allsun", "Select/Deselect All Sun Belt Teams", value = FALSE),
       checkboxGroupInput(inputId = "sun_teams", label = "Teams",
                          choices = sun_teams,
                          selected = c()
@@ -239,7 +246,7 @@ ui <- fluidPage(
   ),
   conditionalPanel(
       condition = "input.conference == 'Mountain West'",
-      checkboxInput("allmw", "Select All Mountain West Teams", value = FALSE),
+      checkboxInput("allmw", "Select/Deselect All Mountain West Teams", value = FALSE),
       checkboxGroupInput(inputId = "mw_teams", label = "Teams",
                          choices = mw_teams,
                          selected = c()
@@ -248,7 +255,7 @@ ui <- fluidPage(
   actionButton("clear", "Clear All Selections")
   ),
   mainPanel(
-    plotOutput(outputId = "plot", height = "700px")
+    plotlyOutput(outputId = "plot", height = "700px")
   )
 )
 
@@ -335,7 +342,7 @@ server <- function(input, output, session) {
   })
   
   selectedteams <- reactive({
-    wintalentdata %>% filter(school %in% c(input$b10_teams,
+    wintalentdata %>% filter(School %in% c(input$b10_teams,
                                            input$b12_teams,
                                            input$sec_teams,
                                            input$acc_teams,
@@ -346,7 +353,7 @@ server <- function(input, output, session) {
                                            input$mw_teams,
                                            input$cusa_teams,
                                            input$ind_teams) &
-                               season %in% seq(input$range[1], input$range[2], by = 1))
+                               Season %in% seq(input$range[1], input$range[2], by = 1))
     
   })
   
@@ -375,14 +382,33 @@ server <- function(input, output, session) {
     reset("allcusa")
   })
   
-  output$plot <- renderPlot({
-    
-      ggplot(selectedteams()) +
-      geom_point(mapping = aes(x = wins, y = `talent.rating`, color = school), alpha = .5, size = 2) +
-      geom_path(mapping = aes(x = wins, y = `talent.rating`, color = school), size = 1.0) +
-      geom_text_repel(mapping = aes(x = wins, y = `talent.rating`, label = paste(school, season)), size = 3) + 
+  output$plot <- renderPlotly({
+   
+    if (nrow(selectedteams()) == 0) {
+      
+      p <- ggplot() +
+      scale_x_continuous("Number of Wins",
+                         limits = c(0, 13),
+                         breaks = seq(0, 13, 1)) +
+      scale_y_continuous("Composite Talent Score",
+                         breaks = seq(0, 1000, 100)) +
+      theme(
+        legend.position = "none",
+        panel.grid.minor.x = element_blank()
+      )
+      
+      ggplotly(p)
+      
+    } else {
+      
+      p <- ggplot(selectedteams(), aes(text = str_c("Head Coach(es): ", coaches,
+                                                    "<br>Season: ", Season))) +
+      geom_point(mapping = aes(x = Wins, y = `Talent Rating`, color = School), alpha = .5, size = 2) +
+      geom_path(mapping = aes(x = Wins, y = `Talent Rating`, color = School, group = School), size = 1.0) +
+      geom_text(subset(selectedteams(), Season == input$range[2]),
+                mapping = aes(x = Wins, y = `Talent Rating`-10, label = paste(School, Season)), size = 3) +
       scale_color_manual(
-        values = as.character(unique(select(arrange(selectedteams(), school), c("school", "color")))$color)
+        values = as.character(unique(select(arrange(selectedteams(), School), c("School", "color")))$color)
       ) +
       scale_x_continuous("Number of Wins",
                          limits = c(0, 13),
@@ -393,6 +419,10 @@ server <- function(input, output, session) {
         legend.position = "none",
         panel.grid.minor.x = element_blank()
       )
+      
+      ggplotly(p)
+      
+    }
   })
   
 }
